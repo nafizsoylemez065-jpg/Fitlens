@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FitLens — AI Kalori Takibi</title>
+<style>
+  :root{
+    --bg:#0f1420; --card:#1a2233; --card2:#212b40; --line:#2c3752;
+    --txt:#eef2fb; --mut:#8b97b5;
+    --grn:#22d07a; --grn2:#0e8f52; --org:#ff9f43; --red:#ff5e6c; --blu:#4da3ff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{background:#070a12;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--txt);
+    display:flex;justify-content:center;min-height:100vh}
+  .phone{width:100%;max-width:420px;background:var(--bg);min-height:100vh;position:relative;
+    box-shadow:0 0 60px rgba(0,0,0,.6)}
+  .screen{display:none;padding:20px 18px 96px;animation:fade .25s ease}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .logo{font-size:20px;font-weight:800;letter-spacing:.3px}
+  .logo span{color:var(--grn)}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--grn),var(--blu));
+    display:flex;align-items:center;justify-content:center;font-weight:700}
+
+  /* Kalori halkası */
+  .ring-wrap{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;
+    display:flex;align-items:center;gap:20px;margin-bottom:16px}
+  .ring{width:130px;height:130px;position:relative;flex-shrink:0}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .val b{font-size:26px}
+  .ring .val small{color:var(--mut);font-size:11px}
+  .macros{flex:1;display:flex;flex-direction:column;gap:10px}
+  .macro{display:flex;align-items:center;gap:8px;font-size:13px}
+  .macro .dot{width:10px;height:10px;border-radius:50%}
+  .macro .bar{flex:1;height:6px;background:var(--card2);border-radius:3px;overflow:hidden}
+  .macro .bar i{display:block;height:100%;border-radius:3px}
+  .macro b{min-width:64px;text-align:right;font-size:12px}
+
+  h2{font-size:15px;margin:18px 0 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;font-weight:700}
+  .meal-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;
+    display:flex;align-items:center;gap:14px;margin-bottom:10px}
+  .meal-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--card2)}
+  .meal-card .info{flex:1}
+  .meal-card .info b{font-size:15px}
+  .meal-card .info small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+  .kcal{font-weight:800;color:var(--grn);font-size:15px}
+  .empty{color:var(--mut);font-size:13px;text-align:center;padding:18px;background:var(--card);
+    border:1px dashed var(--line);border-radius:16px}
+
+  /* Alt menü */
+  nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;
+    background:rgba(20,27,44,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+    display:flex;padding:8px 6px calc(10px + env(safe-area-inset-bottom))}
+  nav button{flex:1;background:none;border:none;color:var(--mut);font-size:10.5px;font-weight:600;
+    display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;cursor:pointer;font-family:inherit}
+  nav button .ic{font-size:21px}
+  nav button.on{color:var(--grn)}
+
+  .fab{position:fixed;bottom:86px;left:50%;transform:translateX(-50%);z-index:5;
+    background:linear-gradient(135deg,var(--grn),var(--grn2));border:none;color:#04150c;
+    width:60px;height:60px;border-radius:50%;font-size:26px;cursor:pointer;font-weight:800;
+    box-shadow:0 8px 24px rgba(34,208,122,.45)}
+
+  /* Form elemanları */
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12.5px;color:var(--mut);margin-bottom:6px;font-weight:600}
+  .field input,.field select{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);
+    border-radius:12px;padding:13px 14px;font-size:15px;font-family:inherit;outline:none}
+  .field input:focus,.field select:focus{border-color:var(--grn)}
+  .row2{display:flex;gap:12px}.row2 .field{flex:1}
+  .btn{width:100%;padding:15px;border:none;border-radius:14px;font-size:15.5px;font-weight:800;
+    cursor:pointer;font-family:inherit;margin-top:8px}
+  .btn-p{background:linear-gradient(135deg,var(--grn),var(--grn2));color:#04150c}
+  .btn-s{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+  .seg{display:flex;background:var(--card2);border-radius:12px;padding:4px;margin-bottom:16px}
+  .seg button{flex:1;background:none;border:none;color:var(--mut);padding:10px;border-radius:9px;
+    font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+  .seg button.on{background:var(--grn);color:#04150c}
+
+  /* Kamera */
+  .cam-box{background:var(--card);border:2px dashed var(--line);border-radius:20px;padding:34px 20px;
+    text-align:center;margin-bottom:16px;cursor:pointer;transition:.2s}
+  .cam-box:active{border-color:var(--grn)}
+  .cam-box .big{font-size:44px;margin-bottom:10px}
+  .cam-box p{color:var(--mut);font-size:13px}
+  .cam-box b{display:block;font-size:16px;margin-bottom:4px}
+  #preview{width:100%;max-height:300px;object-fit:cover;border-radius:18px;display:none;margin-bottom:14px}
+  .ai-box{background:linear-gradient(135deg,#1b2a1f,#152232);border:1px solid #2b5c3d;border-radius:18px;
+    padding:18px;margin-bottom:14px;display:none}
+  .ai-head{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin-bottom:10px}
+  .ai-head .pulse{width:9px;height:9px;border-radius:50%;background:var(--grn);animation:pl 1s infinite}
+  @keyframes pl{50%{opacity:.3}}
+  .ai-line{display:flex;justify-content:space-between;font-size:13.5px;padding:7px 0;border-bottom:1px solid #ffffff12}
+  .ai-line:last-child{border:none}
+  .ai-line b{color:var(--grn)}
+  .conf{margin-top:10px;font-size:12px;color:var(--mut)}
+
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .stat small{color:var(--mut);font-size:11.5px;display:block;margin-bottom:4px}
+  .stat b{font-size:19px}
+  .stat.g b{color:var(--grn)}.stat.o b{color:var(--org)}.stat.b b{color:var(--blu)}
+
+  .banner{background:#2a1e12;border:1px solid #5c452b;color:#ffd9a0;border-radius:12px;
+    padding:10px 14px;font-size:12.5px;margin-bottom:14px;display:none}
+
+  @media(min-width:430px){.phone{border-radius:34px;margin:14px 0;min-height:calc(100vh - 28px)}}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ================= ANA SAYFA ================= -->
+  <section class="screen active" id="scr-home">
+    <header>
+      <div class="logo">Fit<span>Lens</span></div>
+      <div class="avatar" id="avatar">F</div>
+    </header>
+
+    <div class="ring-wrap">
+      <div class="ring">
+        <svg width="130" height="130">
+          <circle cx="65" cy="65" r="56" stroke="#212b40" stroke-width="11" fill="none"/>
+          <circle id="ringArc" cx="65" cy="65" r="56" stroke="#22d07a" stroke-width="11" fill="none"
+            stroke-linecap="round" stroke-dasharray="351.8" stroke-dashoffset="351.8"/>
+        </svg>
+        <div class="val"><b id="rKcal">0</b><small>/ <span id="rGoal">2000</span> kcal</small></div>
+      </div>
+      <div class="macros">
+        <div class="macro"><span class="dot" style="background:#4da3ff"></span>Protein
+          <span class="bar"><i id="pBar" style="background:#4da3ff;width:0%"></i></span><b id="pTxt">0g</b></div>
+        <div class="macro"><span class="dot" style="background:#ff9f43"></span>Karb.
+          <span class="bar"><i id="cBar" style="background:#ff9f43;width:0%"></i></span><b id="cTxt">0g</b></div>
+        <div class="macro"><span class="dot" style="background:#ff5e6c"></span>Yağ
+          <span class="bar"><i id="fBar" style="background:#ff5e6c;width:0%"></i></span><b id="fTxt">0g</b></div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat o"><small>Kalan</small><b id="stRemain">2000 kcal</b></div>
+      <div class="stat b"><small>Öğün Sayısı</small><b id="stMeals">0</b></div>
+    </div>
+
+    <h2>Bugünün Öğünleri</h2>
+    <div id="mealList"></div>
+  </section>
+
+  <!-- ================= KAMERA / AI ================= -->
+  <section class="screen" id="scr-cam">
+    <header><div class="logo">Fotoğraf 📸</div></header>
+    <p style="color:var(--mut);font-size:13px;margin-bottom:14px">Yemeğinin fotoğrafını çek, yapay zeka kalorisini hesaplasın.</p>
+
+    <div class="cam-box" id="camBox">
+      <div class="big">🍽️</div>
+      <b>Fotoğraf Çek veya Yükle</b>
+      <p>Tabağını yukarıdan, iyi ışıkta çek</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
+
+    <img id="preview" alt="yemek">
+
+    <div class="ai-box" id="aiBox">
+      <div class="ai-head"><span class="pulse"></span> FitLens AI Analizi</div>
+      <div id="aiLines"></div>
+      <div class="conf" id="aiConf"></div>
+    </div>
+
+    <div class="banner" id="camBanner">⚠️ Önce hedef kalorini ayarla (Profil sekmesi) — böylece AI porsiyonu buna göre önerir.</div>
+
+    <button class="btn btn-p" id="btnAnalyze" style="display:none">🤖 AI ile Kalori Hesapla</button>
+    <button class="btn btn-s" id="btnAddMeal" style="display:none">✅ Günlüğe Ekle</button>
+  </section>
+
+  <!-- ================= PROFİL / HEDEF ================= -->
+  <section class="screen" id="scr-profile">
+    <header><div class="logo">Profil 🎯</div></header>
+
+    <div class="seg" id="goalMode">
+      <button data-m="auto" class="on">Otomatik Hesap</button>
+      <button data-m="manual">Kendim Belirle</button>
+    </div>
+
+    <div id="autoFields">
+      <div class="row2">
+        <div class="field"><label>Cinsiyet</label>
+          <select id="pGender"><option value="m">Erkek</option><option value="f">Kadın</option></select></div>
+        <div class="field"><label>Yaş</label><input type="number" id="pAge" value="28" min="10" max="99"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Boy (cm)</label><input type="number" id="pHeight" value="175"></div>
+        <div class="field"><label>Kilo (kg)</label><input type="number" id="pWeight" value="75"></div>
+      </div>
+      <div class="field"><label>Aktivite Düzeyi</label>
+        <select id="pAct">
+          <option value="1.2">Hareketsiz (masa başı)</option>
+          <option value="1.375" selected>Az hareketli (haftada 1-3 gün)</option>
+          <option value="1.55">Orta (haftada 3-5 gün)</option>
+          <option value="1.725">Yoğun (haftada 6-7 gün)</option>
+          <option value="1.9">Sporcu / fiziksel iş</option>
+        </select></div>
+      <div class="field"><label>Hedef</label>
+        <select id="pGoalType">
+          <option value="0">Kilomu koru</option>
+          <option value="-400">Kilo ver (−0.5 kg/hafta)</option>
+          <option value="-800">Hızlı kilo ver (−1 kg/hafta)</option>
+          <option value="300">Kas kazan</option>
+        </select></div>
+    </div>
+
+    <div id="manualFields" style="display:none">
+      <div class="field"><label>Günlük Kalori Hedefi (kcal)</label>
+        <input type="number" id="pManual" value="2000" step="50"></div>
+    </div>
+
+    <button class="btn btn-p" id="btnSaveProfile">💾 Hedefi Kaydet</button>
+
+    <h2>🤖 Yapay Zeka (Gerçek Kalori Analizi)</h2>
+    <div class="field"><label>Mistral API Anahtarı (boş bırakılırsa demo mod)</label>
+      <input type="password" id="pApiKey" placeholder="Mistral API anahtarın..." autocomplete="off"></div>
+    <div class="field"><label>Model</label>
+      <select id="pModel">
+        <option value="pixtral-12b-2409" selected>Pixtral 12B (hızlı)</option>
+        <option value="pixtral-large-latest">Pixtral Large (en doğru)</option>
+      </select></div>
+    <p style="color:var(--mut);font-size:12px;margin:-6px 0 16px;line-height:1.5">Anahtar sadece bu cihazda (localStorage) saklanır, hiçbir yere gönderilmez. Anahtar girilince fotoğraf Mistral vision modeline gider ve gerçek kalori analizi yapılır; hata olursa demo moda döner.</p>
+
+    <h2>Beslenme Dağılımı</h2>
+    <div class="row2">
+      <div class="field"><label>Protein (g/kg)</label><input type="number" id="pProt" value="1.8" step="0.1"></div>
+      <div class="field"><label>Yağ (g/kg)</label><input type="number" id="pFat" value="0.9" step="0.1"></div>
+    </div>
+
+    <h2>Veriler</h2>
+    <button class="btn btn-s" id="btnReset">🗑️ Tüm Verileri Sıfırla</button>
+  </section>
+
+  <!-- ================= İSTATİSTİK ================= -->
+  <section class="screen" id="scr-stats">
+    <header><div class="logo">İstatistik 📊</div></header>
+    <div class="stat-grid">
+      <div class="stat g"><small>Bugün Alınan</small><b id="sToday">0 kcal</b></div>
+      <div class="stat"><small>Günlük Hedef</small><b id="sGoal">2000 kcal</b></div>
+      <div class="stat o"><small>Haftalık Ortalama</small><b id="sAvg">0 kcal</b></div>
+      <div class="stat b"><small>Toplam AI Analizi</small><b id="sAi">0</b></div>
+    </div>
+    <h2>Son 7 Gün</h2>
+    <div id="weekChart" style="display:flex;align-items:flex-end;gap:8px;height:150px;background:var(--card);
+      border:1px solid var(--line);border-radius:16px;padding:14px"></div>
+  </section>
+
+  <button class="fab" id="fab">＋</button>
+  <nav>
+    <button data-s="scr-home" class="on"><span class="ic">🏠</span>Ana Sayfa</button>
+    <button data-s="scr-cam"><span class="ic">📸</span>Çek & Hesapla</button>
+    <button data-s="scr-stats"><span class="ic">📊</span>İstatistik</button>
+    <button data-s="scr-profile"><span class="ic">🎯</span>Profil</button>
+  </nav>
+</div>
+
+<script>
+/* ---------- Durum ---------- */
+const S = {
+  goal: 2000, goalMode: 'auto',
+  meals: [],           // {name, kcal, p, c, f, time, src}
+  history: {},         // { '2025-01-01': kcal }
+  aiCount: 0,
+  pending: null,
+  apiKey: '',
+  model: 'pixtral-12b-2409'
+};
+const $ = id => document.getElementById(id);
+const todayKey = () => new Date().toISOString().slice(0,10);
+
+function save(){ localStorage.setItem('fitlens', JSON.stringify(S)); }
+function load(){
+  try{ Object.assign(S, JSON.parse(localStorage.getItem('fitlens')||'{}')); }catch(e){}
+}
+
+/* ---------- Yemek bilgi tabanı (demo AI) ---------- */
+const FOOD_DB = [
+  {k:['kuru fasulye','fasulye','kuru fasulye'], n:'Kuru Fasulye', kcal:340, p:21, c:52, f:5, u:'porsiyon'},
+  {k:['pilav','beyaz pilav'], n:'Pilav', kcal:310, p:6, c:64, f:4, u:'porsiyon'},
+  {k:['kebap','şiş','dürüm'], n:'Kebap / Dürüm', kcal:520, p:32, c:45, f:24, u:'porsiyon'},
+  {k:['lahmacun'], n:'Lahmacun', kcal:280, p:12, c:36, f:9, u:'adet'},
+  {k:['pide'], n:'Pide', kcal:450, p:18, c:62, f:13, u:'adet'},
+  {k:['pizza'], n:'Pizza', kcal:285, p:12, c:33, f:11, u:'dilim'},
+  {k:['burger','hamburger'], n:'Hamburger', kcal:540, p:28, c:42, f:28, u:'adet'},
+  {k:['makarna','spagetti','penne'], n:'Makarna', kcal:380, p:13, c:60, f:9, u:'porsiyon'},
+  {k:['salata','çoban'], n:'Salata', kcal:120, p:4, c:12, f:6, u:'kase'},
+  {k:['tavuk','ızgara tavuk','tavuk göğsü'], n:'Izgara Tavuk', kcal:260, p:38, c:2, f:9, u:'porsiyon'},
+  {k:['köfte'], n:'Köfte', kcal:400, p:26, c:12, f:26, u:'porsiyon'},
+  {k:['balık','somon','levrek'], n:'Balık', kcal:290, p:32, c:2, f:16, u:'porsiyon'},
+  {k:['menemen'], n:'Menemen', kcal:240, p:12, c:10, f:16, u:'porsiyon'},
+  {k:['omlet','yumurta'], n:'Omlet / Yumurta', kcal:210, p:14, c:3, f:15, u:'porsiyon'},
+  {k:['çorba','mercimek'], n:'Çorba', kcal:180, p:9, c:24, f:5, u:'kase'},
+  {k:['börek','poğaça','simit'], n:'Börek / Simit', kcal:330, p:9, c:40, f:14, u:'adet'},
+  {k:['tatlı','baklava','sütlaç','pasta'], n:'Tatlı', kcal:420, p:6, c:58, f:18, u:'dilim'},
+  {k:['meyve','elma','muz','portakal'], n:'Meyve', kcal:95, p:1, c:23, f:0.5, u:'porsiyon'},
+  {k:['yoğurt','yogurt','ayran'], n:'Yoğurt / Ayran', kcal:110, p:8, c:10, f:4, u:'kase'},
+  {k:['tost','sandviç'], n:'Tost / Sandviç', kcal:350, p:16, c:38, f:14, u:'adet'},
+];
+function guessFood(){
+  const f = FOOD_DB[Math.floor(Math.random()*FOOD_DB.length)];
+  const portion = 0.7 + Math.random()*0.9; // 0.7x - 1.6x porsiyon
+  return {
+    name: f.n,
+    kcal: Math.round(f.kcal*portion),
+    p: Math.round(f.p*portion), c: Math.round(f.c*portion), f: Math.round(f.f*portion),
+    portion: Math.round(portion*100)/100,
+    conf: 0.72 + Math.random()*0.24
+  };
+}
+
+/* ---------- Navigasyon ---------- */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    $(b.dataset.s).classList.add('active');
+    $('fab').style.display = b.dataset.s==='scr-cam' ? 'none' : 'block';
+    if(b.dataset.s==='scr-stats') renderStats();
+  };
+});
+$('fab').onclick = ()=> document.querySelector('nav button[data-s="scr-cam"]').click();
+
+/* ---------- Ana sayfa ---------- */
+function render(){
+  const used = S.meals.reduce((a,m)=>a+m.kcal,0);
+  const goal = S.goal;
+  const pct = Math.min(used/goal,1);
+  $('ringArc').style.strokeDashoffset = 351.8*(1-pct);
+  $('ringArc').style.stroke = used>goal ? 'var(--red)' : 'var(--grn)';
+  $('rKcal').textContent = used;
+  $('rGoal').textContent = goal;
+  $('stRemain').textContent = Math.max(goal-used,0)+' kcal';
+  $('stMeals').textContent = S.meals.length;
+
+  const pT = Math.round(goal*0.3/4), cT = Math.round(goal*0.4/4), fT = Math.round(goal*0.3/9);
+  const tp = S.meals.reduce((a,m)=>a+m.p,0), tc = S.meals.reduce((a,m)=>a+m.c,0), tf = S.meals.reduce((a,m)=>a+m.f,0);
+  $('pBar').style.width = Math.min(tp/pT*100,100)+'%'; $('pTxt').textContent = tp+'/'+pT+'g';
+  $('cBar').style.width = Math.min(tc/cT*100,100)+'%'; $('cTxt').textContent = tc+'/'+cT+'g';
+  $('fBar').style.width = Math.min(tf/fT*100,100)+'%'; $('fTxt').textContent = tf+'/'+fT+'g';
+
+  const list = $('mealList');
+  list.innerHTML = S.meals.length ? '' : '<div class="empty">Henüz öğün eklemedin.<br>＋ butonuna bas ve yemeğinin fotoğrafını çek 📸</div>';
+  [...S.meals].reverse().forEach(m=>{
+    const d = document.createElement('div');
+    d.className='meal-card';
+    d.innerHTML = `<div class="meal-ico">${m.src==='ai'?'🤖':'🍴'}</div>
+      <div class="info"><b>${m.name}</b><small>${m.time} · P:${m.p}g K:${m.c}g Y:${m.f}g</small></div>
+      <div class="kcal">${m.kcal} kcal</div>`;
+    list.appendChild(d);
+  });
+  $('avatar').textContent = (localStorage.getItem('fitlens_name')||'F')[0].toUpperCase();
+  save();
+}
+
+/* ---------- Kamera ---------- */
+let imageDataURL = null;
+$('camBox').onclick = ()=> $('fileInput').click();
+$('fileInput').onchange = e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    imageDataURL = ev.target.result;
+    $('preview').src = imageDataURL;
+    $('preview').style.display = 'block';
+    $('camBox').style.display = 'none';
+    $('btnAnalyze').style.display = 'block';
+    $('aiBox').style.display = 'none';
+    $('btnAddMeal').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+};
+
+/* ---------- AI: gerçek vision çağrısı ---------- */
+async function analyzeWithAI(dataURL){
+  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + S.apiKey
+    },
+    body: JSON.stringify({
+      model: S.model || 'pixtral-12b-2409',
+      temperature: 0.2,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text:
+            'Bu fotoğraftaki yemeği analiz et. Görüntüdeki yemeği ve yaklaşık porsiyonu belirle, kalorisini ve makro besin değerlerini tahmin et. "name" alanını Türkçe yaz. Sadece şu JSON formatında cevap ver, başka hiçbir metin ekleme: {"name":"...","portion":1.0,"kcal":0,"p":0,"c":0,"f":0,"conf":0.9} — portion porsiyon katsayısı (1.0 = standart), kcal kalori, p protein gram, c karbonhidrat gram, f yağ gram, conf 0-1 arası güven skoru. Kullanıcının günlük hedefi ' + S.goal + ' kcal.' },
+          { type: 'image_url', image_url: dataURL }
+        ]
+      }],
+      response_format: { type: 'json_object' }
+    })
+  });
+  if(!res.ok) throw new Error('API hatası: ' + res.status);
+  const data = await res.json();
+  const r = JSON.parse(data.choices[0].message.content);
+  return {
+    name: r.name || 'Bilinmeyen yemek',
+    kcal: Math.round(r.kcal) || 0,
+    p: Math.round(r.p) || 0, c: Math.round(r.c) || 0, f: Math.round(r.f) || 0,
+    portion: Math.round((r.portion||1)*100)/100,
+    conf: Math.min(Math.max(r.conf||0.8, 0), 1),
+    real: true
+  };
+}
+
+$('btnAnalyze').onclick = async ()=>{
+  const box = $('aiBox'), lines = $('aiLines');
+  box.style.display = 'block';
+  $('btnAnalyze').disabled = true;
+  const useReal = !!S.apiKey;
+  lines.innerHTML = `<div class="ai-line"><span>${useReal ? '🤖 Mistral vision modeline gönderiliyor…' : 'Görüntü analiz ediliyor…'}</span><b>⏳</b></div>`;
+
+  let r = null, errMsg = null;
+  if(useReal){
+    try{ r = await analyzeWithAI(imageDataURL); }
+    catch(err){ errMsg = err.message; }
+  }
+  if(!r) r = guessFood();
+
+  S.pending = r;
+  S.aiCount++;
+  lines.innerHTML = `
+    <div class="ai-line"><span>Tespit edilen yemek</span><b>${r.name}</b></div>
+    <div class="ai-line"><span>Tahmini porsiyon</span><b>${r.portion}x</b></div>
+    <div class="ai-line"><span>Kalori</span><b>${r.kcal} kcal</b></div>
+    <div class="ai-line"><span>Protein / Karb. / Yağ</span><b>${r.p}g · ${r.c}g · ${r.f}g</b></div>
+    <div class="ai-line"><span>Günlük hedefin %'si</span><b>${Math.round(r.kcal/S.goal*100)}%</b></div>`;
+  $('aiConf').textContent = errMsg
+    ? `⚠️ Gerçek AI başarısız (${errMsg}) — demo modu kullanıldı. Güven: %${Math.round(r.conf*100)}`
+    : useReal
+      ? `✅ Gerçek AI analizi (${S.model}) · Güven: %${Math.round(r.conf*100)}`
+      : `Demo modunda çalışıyor — gerçek analiz için Profil'den Mistral API anahtarı ekle. Güven: %${Math.round(r.conf*100)}`;
+  $('btnAddMeal').style.display = 'block';
+  $('btnAnalyze').disabled = false;
+  $('btnAnalyze').style.display = 'none';
+  render();
+};
+
+$('btnAddMeal').onclick = ()=>{
+  if(!S.pending) return;
+  S.meals.push({...S.pending, time:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}), src:'ai'});
+  S.history[todayKey()] = (S.history[todayKey()]||0) + S.pending.kcal;
+  S.pending = null;
+  imageDataURL = null;
+  $('btnAddMeal').style.display='none';
+  $('preview').style.display='none';
+  $('aiBox').style.display='none';
+  $('camBox').style.display='block';
+  $('fileInput').value='';
+  render();
+  document.querySelector('nav button[data-s="scr-home"]').click();
+};
+
+/* ---------- Profil ---------- */
+let mode = 'auto';
+document.querySelectorAll('#goalMode button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('#goalMode button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    mode = b.dataset.m;
+    $('autoFields').style.display = mode==='auto'?'block':'none';
+    $('manualFields').style.display = mode==='manual'?'block':'none';
+  };
+});
+
+$('btnSaveProfile').onclick = ()=>{
+  if(mode==='manual'){
+    S.goal = Math.max(800, parseInt($('pManual').value)||2000);
+  }else{
+    const g=$('pGender').value, age=+$('pAge').value, h=+$('pHeight').value, w=+$('pWeight').value;
+    const act=+$('pAct').value, adj=+$('pGoalType').value;
+    const bmr = g==='m' ? 10*w+6.25*h-5*age+5 : 10*w+6.25*h-5*age-161;
+    S.goal = Math.round((bmr*act+adj)/10)*10;
+    localStorage.setItem('fitlens_name','Fit');
+  }
+  S.goalMode = mode;
+  save(); render();
+  $('camBanner').style.display='none';
+  alert('✅ Günlük hedef: '+S.goal+' kcal\n(BMR: Mifflin-St Jeor formülü ile hesaplandı)');
+};
+
+$('btnReset').onclick = ()=>{
+  if(confirm('Tüm öğünler ve geçmiş silinecek. Emin misin?')){
+    localStorage.removeItem('fitlens');
+    S.meals=[]; S.history={}; S.aiCount=0; S.goal=2000;
+    render(); renderStats();
+  }
+};
+
+/* ---------- İstatistik ---------- */
+function renderStats(){
+  const used = S.meals.reduce((a,m)=>a+m.kcal,0);
+  $('sToday').textContent = used+' kcal';
+  $('sGoal').textContent = S.goal+' kcal';
+  $('sAi').textContent = S.aiCount;
+  const days = Object.entries(S.history).slice(-7);
+  const avg = days.length ? Math.round(days.reduce((a,[,v])=>a+v,0)/days.length) : 0;
+  $('sAvg').textContent = avg+' kcal';
+  const ch = $('weekChart'); ch.innerHTML='';
+  const max = Math.max(S.goal, ...days.map(([,v])=>v), 1);
+  for(let i=6;i>=0;i--){
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const k = d.toISOString().slice(0,10);
+    const v = S.history[k]||0;
+    const bar = document.createElement('div');
+    bar.style.cssText = `flex:1;background:${v>S.goal?'var(--red)':'var(--grn)'};border-radius:6px 6px 3px 3px;
+      height:${Math.max(v/max*100,3)}%;opacity:${v?1:.25};position:relative`;
+    bar.title = v+' kcal';
+    ch.appendChild(bar);
+  }
+}
+
+/* ---------- Başlat ---------- */
+load();
+$('pApiKey').value = S.apiKey || '';
+$('pModel').value = S.model || 'pixtral-12b-2409';
+$('pApiKey').oninput = e=>{ S.apiKey = e.target.value.trim(); save(); };
+$('pModel').onchange = e=>{ S.model = e.target.value; save(); };
+render();
+if(S.goalMode==='manual'){ S.goal = S.goal || 2000; }
+</script>
+</body>
+</html>
